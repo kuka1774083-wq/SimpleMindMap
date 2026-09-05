@@ -1,0 +1,12 @@
+{
+  "data-share": {
+    "shares": [
+      { "name": "SimpleMindMap" },
+      { "name": "SimpleMindMap/data" }
+    ]
+  },
+  "api-scope": [
+    "trim.file.userAccess",
+    "trim.file.userAcl"
+  ]
+}

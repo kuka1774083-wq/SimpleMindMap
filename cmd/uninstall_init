@@ -1,0 +1,26 @@
+#!/bin/sh
+
+# uninstall_init runs before fnOS removes the application. User data is kept
+# unless the uninstall wizard explicitly supplied the exact delete value.
+[ "${wizard_remove_user_data:-keep}" = "delete" ] || exit 0
+
+pkgvar=${TRIM_PKGVAR%/}
+case "$pkgvar" in
+  ""|/|.|..|*".."*) exit 0 ;;
+  /*) ;;
+  *) exit 0 ;;
+esac
+
+data_dir="$pkgvar/SimpleMindMap"
+case "$data_dir" in
+  "$pkgvar"/SimpleMindMap) ;;
+  *) exit 0 ;;
+esac
+
+# The target is fixed below the application-specific persistent directory.
+# Never delete TRIM_PKGVAR itself or any path supplied by the wizard.
+if [ -e "$data_dir" ] || [ -L "$data_dir" ]; then
+  rm -rf "$data_dir"
+fi
+
+exit 0

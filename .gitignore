@@ -1,0 +1,20 @@
+# Dependencies
+web/node_modules/
+simple-mind-map/node_modules/
+
+# Generated frontend and package artifacts
+dist/
+app/ui/dist/
+*.fpk
+release/
+
+# Local application data and build tools
+.appdata/
+fnpack.exe
+*.log
+
+# Operating system and editor files
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/

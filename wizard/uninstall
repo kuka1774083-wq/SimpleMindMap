@@ -1,0 +1,27 @@
+[
+  {
+    "stepTitle": "卸载 SimpleMindMap",
+    "items": [
+      {
+        "type": "tips",
+        "helpText": "可选择保留云端文件，以便以后重新安装后继续使用。"
+      },
+      {
+        "type": "radio",
+        "field": "wizard_remove_user_data",
+        "label": "用户文件",
+        "initValue": "keep",
+        "options": [
+          {
+            "label": "保留用户文件（推荐）",
+            "value": "keep"
+          },
+          {
+            "label": "删除全部 SimpleMindMap 用户文件，且无法恢复",
+            "value": "delete"
+          }
+        ]
+      }
+    ]
+  }
+]

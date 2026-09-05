@@ -1,0 +1,29 @@
+{
+  ".url": {
+    "SimpleMindMap.思维导图": {
+      "title": "思维导图",
+      "icon": "images/simplemindmap-v12-icon_{0}.png",
+      "type": "iframe",
+      "protocol": "",
+      "gatewayPrefix": "/app/SimpleMindMap",
+      "gatewaySocket": "app.sock",
+      "url": "/app/SimpleMindMap/",
+      "allUsers": false
+    },
+    "SimpleMindMap.文件编辑": {
+      "title": "思维导图",
+      "icon": "images/simplemindmap-v12-icon_{0}.png",
+      "type": "iframe",
+      "protocol": "",
+      "gatewayPrefix": "/app/SimpleMindMap",
+      "gatewaySocket": "app.sock",
+      "url": "/app/SimpleMindMap/#/edit",
+      "allUsers": true,
+      "fileTypes": [
+        "smm",
+        "xmind"
+      ],
+      "noDisplay": true
+    }
+  }
+}

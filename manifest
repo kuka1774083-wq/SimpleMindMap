@@ -1,0 +1,17 @@
+appname               = SimpleMindMap
+version               = 0.1.5
+display_name          = SimpleMindMap
+desc                  = 飞牛 OS 网页版思维导图
+platform              = x86
+source                = thirdparty
+maintainer            = wanglin2
+maintainer_url        = https://github.com/wanglin2/mind-map
+distributor           = MEMUZE
+distributor_url       = https://space.bilibili.com/41158746?spm_id_from=333.1007.0.0
+desktop_uidir         = ui
+desktop_applaunchname = SimpleMindMap.思维导图
+checkport             = false
+install_dep_apps      = nodejs_v22
+ctl_stop              = true
+disable_authorization_path = false
+micro_app             = true

@@ -211,6 +211,9 @@ export default {
           })
         })
         this.$bus.$emit('setData', data)
+        if (window.__simpleMindMapExternalImporting) {
+          this.$bus.$emit('externalFileLoaded')
+        }
         this.$message.success(this.$t('import.importSuccess'))
       } catch (error) {
         console.log(error)

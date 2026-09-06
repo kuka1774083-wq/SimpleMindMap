@@ -192,7 +192,8 @@ export default {
       mindMapConfig: {},
       prevImg: '',
       storeConfigTimer: null,
-      showDragMask: false
+      showDragMask: false,
+      externalFileReady: false
     }
   },
   computed: {
@@ -233,6 +234,7 @@ export default {
     this.$bus.$on('paddingChange', this.onPaddingChange)
     this.$bus.$on('export', this.export)
     this.$bus.$on('manualSave', this.manualSave)
+    this.$bus.$on('externalFileLoaded', this.handleExternalFileLoaded)
     this.$bus.$on('downloadCloud', this.downloadCloud)
     this.$bus.$on('setData', this.setData)
     this.$bus.$on('startTextEdit', this.handleStartTextEdit)
@@ -243,12 +245,14 @@ export default {
     this.$bus.$on('showLoading', this.handleShowLoading)
     this.$bus.$on('localStorageExceeded', this.onLocalStorageExceeded)
     window.addEventListener('resize', this.handleResize)
+    await this.openPendingExternalFile()
   },
   beforeDestroy() {
     this.$bus.$off('execCommand', this.execCommand)
     this.$bus.$off('paddingChange', this.onPaddingChange)
     this.$bus.$off('export', this.export)
     this.$bus.$off('manualSave', this.manualSave)
+    this.$bus.$off('externalFileLoaded', this.handleExternalFileLoaded)
     this.$bus.$off('downloadCloud', this.downloadCloud)
     this.$bus.$off('setData', this.setData)
     this.$bus.$off('startTextEdit', this.handleStartTextEdit)
@@ -325,6 +329,7 @@ export default {
         const name = String((cloudPath || externalPath).split('/').pop() || '')
         if (/\.(smm|json)$/i.test(name)) {
           this.mindMapData = JSON.parse(await res.text())
+          if (externalPath) this.externalFileReady = true
           if (this.mindMap) {
             this.mindMap.setFullData(this.mindMapData)
             this.mindMap.view.reset()
@@ -332,7 +337,10 @@ export default {
         } else {
           const file = new File([await res.blob()], name)
           window.__simpleMindMapExternalFile = file
-          if (this.mindMap) this.$bus.$emit('importFile', file)
+          if (this.mindMap) {
+            window.__simpleMindMapExternalImporting = true
+            this.$bus.$emit('importFile', file)
+          }
         }
         if (externalPath) await fetch('/app/SimpleMindMap/api/recent', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ externalPath, name }) })
       } catch (error) {
@@ -358,7 +366,7 @@ export default {
 
     async saveExternalData(data) {
       const externalPath = this.getExternalPath()
-      if (!externalPath) return false
+      if (!externalPath || !this.externalFileReady) return false
       const name = String(externalPath.split('/').pop() || '思维导图.smm')
       let content
       if (/\.xmind$/i.test(name)) {
@@ -372,6 +380,20 @@ export default {
 
     getExternalPath() {
       return String(this.$route.query.path || window.__simpleMindMapExternalPath || '')
+    },
+
+    async openPendingExternalFile() {
+      const file = window.__simpleMindMapExternalFile
+      if (!file || !this.mindMap) return
+      window.__simpleMindMapExternalFile = null
+      window.__simpleMindMapExternalImporting = true
+      await this.$nextTick()
+      this.$bus.$emit('importFile', file)
+    },
+
+    handleExternalFileLoaded() {
+      this.externalFileReady = true
+      window.__simpleMindMapExternalImporting = false
     },
 
     async authorizeExternalFile(externalPath) {
@@ -392,13 +414,13 @@ export default {
     // 存储数据当数据有变时
     bindSaveEvent() {
       this.$bus.$on('data_change', data => {
-        if (this.$route.query.cloudPath) { this.mindMapData = { ...this.mindMapData, root: data }; this.saveCloudData(this.mindMapData).catch(() => this.$message.error('云端保存失败')) } else if (this.getExternalPath() && window.__simpleMindMapExternalAuthorizedPath === this.getExternalPath()) { this.mindMapData = { ...this.mindMapData, root: data }; this.saveExternalData(this.mindMapData).catch(error => this.$message.error(`源文件保存失败：${error.message}`)) }
+        if (this.$route.query.cloudPath) { this.mindMapData = { ...this.mindMapData, root: data }; this.saveCloudData(this.mindMapData).catch(() => this.$message.error('云端保存失败')) } else if (this.getExternalPath() && this.externalFileReady && window.__simpleMindMapExternalAuthorizedPath === this.getExternalPath()) { this.mindMapData = { ...this.mindMapData, root: data }; this.saveExternalData(this.mindMapData).catch(error => this.$message.error(`源文件保存失败：${error.message}`)) }
         else if (this.$route.query.localFile !== '1') storeData({ root: data })
       })
       this.$bus.$on('view_data_change', data => {
         clearTimeout(this.storeConfigTimer)
         this.storeConfigTimer = setTimeout(() => {
-          if (this.$route.query.cloudPath) { this.mindMapData = { ...this.mindMapData, view: data }; this.saveCloudData(this.mindMapData).catch(() => this.$message.error('云端保存失败')) } else if (this.getExternalPath() && window.__simpleMindMapExternalAuthorizedPath === this.getExternalPath()) { this.mindMapData = { ...this.mindMapData, view: data }; this.saveExternalData(this.mindMapData).catch(error => this.$message.error(`源文件保存失败：${error.message}`)) }
+          if (this.$route.query.cloudPath) { this.mindMapData = { ...this.mindMapData, view: data }; this.saveCloudData(this.mindMapData).catch(() => this.$message.error('云端保存失败')) } else if (this.getExternalPath() && this.externalFileReady && window.__simpleMindMapExternalAuthorizedPath === this.getExternalPath()) { this.mindMapData = { ...this.mindMapData, view: data }; this.saveExternalData(this.mindMapData).catch(error => this.$message.error(`源文件保存失败：${error.message}`)) }
           else if (this.$route.query.localFile !== '1') storeData({ view: data })
         }, 300)
       })
@@ -411,11 +433,11 @@ export default {
         if (this.$route.query.cloudPath) {
           await this.saveCloudData(data)
           this.$message.success('已保存到云端')
-        } else if (this.getExternalPath() && window.__simpleMindMapExternalAuthorizedPath === this.getExternalPath()) {
+        } else if (this.getExternalPath() && this.externalFileReady && window.__simpleMindMapExternalAuthorizedPath === this.getExternalPath()) {
           await this.saveExternalData(data)
           this.$message.success('已回写到源文件')
         } else if (this.getExternalPath()) {
-          this.$message.warning('请先授权访问源文件夹')
+          this.$message.warning(window.__simpleMindMapExternalAuthorizedPath === this.getExternalPath() ? '源文件尚未导入完成' : '请先授权访问源文件夹')
         } else if (this.$route.query.localFile !== '1') storeData(data)
       } catch (error) {
         this.$message.error(`保存失败：${error.message}`)

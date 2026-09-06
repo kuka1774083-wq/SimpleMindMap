@@ -18,6 +18,8 @@ Vue.prototype.$bus = bus
 Vue.use(ElementUI)
 Vue.use(VueViewer)
 
+let appInstance = null
+
 const supportedExternalFile = value => /\.(smm|xmind)$/i.test(value)
 
 const decodeValue = value => {
@@ -68,6 +70,11 @@ const launchTarget = () => {
 }
 
 const initApp = () => {
+  if (appInstance) {
+    appInstance.$destroy()
+    appInstance.$el.remove()
+    appInstance = null
+  }
   i18n.locale = getLang()
   const { externalPath, fileURL } = launchTarget()
   if (externalPath && !router.currentRoute.query.path) {
@@ -78,12 +85,14 @@ const initApp = () => {
   } else if (fileURL && !router.currentRoute.query.fileURL) {
     window.location.hash = `/edit?${new URLSearchParams({ fileURL }).toString()}`
   }
-  new Vue({
+  const mountPoint = document.getElementById('app') || document.body.appendChild(document.createElement('div'))
+  mountPoint.id = 'app'
+  appInstance = new Vue({
     render: h => h(App),
     router,
     store,
     i18n
-  }).$mount('#app')
+  }).$mount(mountPoint)
 }
 
 // 是否处于接管应用模式

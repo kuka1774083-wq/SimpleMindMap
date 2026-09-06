@@ -321,6 +321,7 @@ export default {
         const name = String((cloudPath || externalPath).split('/').pop() || '')
         if (/\.(smm|json)$/i.test(name)) {
           this.mindMapData = JSON.parse(await res.text())
+          if (externalPath) this.repairDuplicateNodeUids(this.mindMapData)
           if (externalPath) this.externalFileReady = true
           if (this.mindMap) {
             this.mindMap.setFullData(this.mindMapData)
@@ -383,6 +384,26 @@ export default {
 
     getExternalPath() {
       return String(this.$route.query.path || window.__simpleMindMapExternalPath || '')
+    },
+
+    // Render caches are keyed by uid. Retain the first valid uid and let the
+    // mind-map core create replacements for duplicates from external files.
+    repairDuplicateNodeUids(document) {
+      const seen = new Set()
+      const repairData = data => {
+        if (!data || typeof data !== 'object' || !data.uid) return
+        if (seen.has(data.uid)) delete data.uid
+        else seen.add(data.uid)
+      }
+      const walk = node => {
+        if (!node || typeof node !== 'object') return
+        repairData(node.data)
+        const generalization = node.data && node.data.generalization
+        const list = Array.isArray(generalization) ? generalization : [generalization]
+        list.forEach(repairData)
+        ;(node.children || []).forEach(walk)
+      }
+      walk(document && (document.root || document))
     },
 
     async openPendingExternalFile() {
@@ -631,9 +652,11 @@ export default {
       this.handleShowLoading()
       let rootNodeData = null
       if (data.root) {
+        if (this.getExternalPath()) this.repairDuplicateNodeUids(data)
         this.mindMap.setFullData(data)
         rootNodeData = data.root
       } else {
+        if (this.getExternalPath()) this.repairDuplicateNodeUids(data)
         this.mindMap.setData(data)
         rootNodeData = data
       }

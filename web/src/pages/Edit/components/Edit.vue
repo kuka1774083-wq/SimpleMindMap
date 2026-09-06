@@ -316,7 +316,7 @@ export default {
       const externalPath = this.getExternalPath()
       if (!cloudPath && !externalPath) return
       try {
-        const res = await fetch(cloudPath ? `/app/SimpleMindMap/api/files/${encodeURIComponent(cloudPath)}` : `/app/SimpleMindMap/api/external/file?path=${encodeURIComponent(externalPath)}`)
+        const res = await this.fetchDocument(cloudPath, externalPath)
         if (!res.ok) throw new Error('file_read_failed')
         const name = String((cloudPath || externalPath).split('/').pop() || '')
         if (/\.(smm|json)$/i.test(name)) {
@@ -334,10 +334,17 @@ export default {
             this.$bus.$emit('importFile', file)
           }
         }
-        if (externalPath) await fetch('/app/SimpleMindMap/api/recent', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ externalPath, name }) })
+        if (externalPath) fetch('/app/SimpleMindMap/api/recent', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ externalPath, name }) }).catch(() => {})
       } catch (error) {
         this.$message.error(externalPath ? '源文件读取失败或当前用户没有访问权限' : '云端文件读取失败')
       }
+    },
+
+    fetchDocument(cloudPath, externalPath) {
+      const url = cloudPath
+        ? `/app/SimpleMindMap/api/files/${encodeURIComponent(cloudPath)}`
+        : `/app/SimpleMindMap/api/external/file?path=${encodeURIComponent(externalPath)}`
+      return fetch(url)
     },
 
     async saveCloudData(data) {
@@ -365,9 +372,13 @@ export default {
         const dataUrl = await this.mindMap.doExport.export('xmind', false, name.replace(/\.xmind$/i, ''))
         content = String(dataUrl).split(',').pop()
       } else content = this.encodeContent(JSON.stringify(data))
-      const res = await fetch(`/app/SimpleMindMap/api/external/file?path=${encodeURIComponent(externalPath)}`, { method: 'PUT', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ content }) })
+      const res = await this.saveExternalFile(externalPath, content)
       if (!res.ok) throw new Error((await res.json().catch(() => ({}))).error || 'external_save_failed')
       return true
+    },
+
+    saveExternalFile(externalPath, content) {
+      return fetch(`/app/SimpleMindMap/api/external/file?path=${encodeURIComponent(externalPath)}`, { method: 'PUT', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ content }) })
     },
 
     getExternalPath() {

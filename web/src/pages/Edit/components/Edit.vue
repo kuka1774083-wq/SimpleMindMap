@@ -122,9 +122,6 @@ import Setting from './Setting.vue'
 import AssociativeLineStyle from './AssociativeLineStyle.vue'
 import NodeImgPlacementToolbar from './NodeImgPlacementToolbar.vue'
 import NodeNoteSidebar from './NodeNoteSidebar.vue'
-import { TrimApp } from '@trimjs/web-app'
-
-const trimApp = new TrimApp()
 // 注册插件
 MindMap.usePlugin(MiniMap)
   .usePlugin(Watermark)
@@ -318,13 +315,6 @@ export default {
       const cloudPath = this.$route.query.cloudPath
       const externalPath = this.getExternalPath()
       if (!cloudPath && !externalPath) return
-      if (externalPath && !window.__simpleMindMapExternalAuthorizedPath) {
-        const separator = externalPath.lastIndexOf('/')
-        const directory = separator > 0 ? externalPath.slice(0, separator) : externalPath
-        const result = await trimApp.authorizeUserFile(directory)
-        if (!result?.data) throw new Error('file_access_denied')
-        window.__simpleMindMapExternalAuthorizedPath = externalPath
-      }
       try {
         const res = await fetch(cloudPath ? `/app/SimpleMindMap/api/files/${encodeURIComponent(cloudPath)}` : `/app/SimpleMindMap/api/external/file?path=${encodeURIComponent(externalPath)}`)
         if (!res.ok) throw new Error('file_read_failed')
@@ -368,7 +358,7 @@ export default {
 
     async saveExternalData(data) {
       const externalPath = this.getExternalPath()
-      if (!externalPath || !this.externalFileReady || window.__simpleMindMapExternalAuthorizedPath !== externalPath) return false
+      if (!externalPath || !this.externalFileReady) return false
       const name = String(externalPath.split('/').pop() || '思维导图.smm')
       let content
       if (/\.xmind$/i.test(name)) {

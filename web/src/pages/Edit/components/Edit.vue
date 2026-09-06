@@ -122,10 +122,6 @@ import Setting from './Setting.vue'
 import AssociativeLineStyle from './AssociativeLineStyle.vue'
 import NodeImgPlacementToolbar from './NodeImgPlacementToolbar.vue'
 import NodeNoteSidebar from './NodeNoteSidebar.vue'
-import { TrimApp } from '@trimjs/web-app'
-
-const trimApp = new TrimApp()
-
 // 注册插件
 MindMap.usePlugin(MiniMap)
   .usePlugin(Watermark)
@@ -319,10 +315,6 @@ export default {
       const cloudPath = this.$route.query.cloudPath
       const externalPath = this.getExternalPath()
       if (!cloudPath && !externalPath) return
-      if (externalPath && window.__simpleMindMapExternalAuthorizedPath !== externalPath) {
-        await this.authorizeExternalFile(externalPath)
-        return
-      }
       try {
         const res = await fetch(cloudPath ? `/app/SimpleMindMap/api/files/${encodeURIComponent(cloudPath)}` : `/app/SimpleMindMap/api/external/file?path=${encodeURIComponent(externalPath)}`)
         if (!res.ok) throw new Error('file_read_failed')
@@ -344,7 +336,7 @@ export default {
         }
         if (externalPath) await fetch('/app/SimpleMindMap/api/recent', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ externalPath, name }) })
       } catch (error) {
-        this.$message.error(externalPath ? '源文件读取失败或无访问权限' : '云端文件读取失败')
+        this.$message.error(externalPath ? '源文件读取失败或当前用户没有访问权限' : '云端文件读取失败')
       }
     },
 
@@ -396,31 +388,16 @@ export default {
       window.__simpleMindMapExternalImporting = false
     },
 
-    async authorizeExternalFile(externalPath) {
-      try {
-        const sourcePath = externalPath || this.getExternalPath()
-        const separator = sourcePath.lastIndexOf('/')
-        const directory = separator > 0 ? sourcePath.slice(0, separator) : sourcePath
-        const result = await trimApp.authorizeUserFile(directory)
-        if (!result || (result.code !== undefined && result.code !== 0) || result.data === false) throw new Error(result?.msg || 'file_access_denied')
-        window.__simpleMindMapExternalAuthorizedPath = sourcePath
-        await this.loadCloudData()
-      } catch (error) {
-        this.$message.error(`无法取得源文件访问权限：${error.message}`)
-        this.$router.replace('/')
-      }
-    },
-
     // 存储数据当数据有变时
     bindSaveEvent() {
       this.$bus.$on('data_change', data => {
-        if (this.$route.query.cloudPath) { this.mindMapData = { ...this.mindMapData, root: data }; this.saveCloudData(this.mindMapData).catch(() => this.$message.error('云端保存失败')) } else if (this.getExternalPath() && this.externalFileReady && window.__simpleMindMapExternalAuthorizedPath === this.getExternalPath()) { this.mindMapData = { ...this.mindMapData, root: data }; this.saveExternalData(this.mindMapData).catch(error => this.$message.error(`源文件保存失败：${error.message}`)) }
+        if (this.$route.query.cloudPath) { this.mindMapData = { ...this.mindMapData, root: data }; this.saveCloudData(this.mindMapData).catch(() => this.$message.error('云端保存失败')) } else if (this.getExternalPath() && this.externalFileReady) { this.mindMapData = { ...this.mindMapData, root: data }; this.saveExternalData(this.mindMapData).catch(error => this.$message.error(`源文件保存失败：${error.message}`)) }
         else if (this.$route.query.localFile !== '1') storeData({ root: data })
       })
       this.$bus.$on('view_data_change', data => {
         clearTimeout(this.storeConfigTimer)
         this.storeConfigTimer = setTimeout(() => {
-          if (this.$route.query.cloudPath) { this.mindMapData = { ...this.mindMapData, view: data }; this.saveCloudData(this.mindMapData).catch(() => this.$message.error('云端保存失败')) } else if (this.getExternalPath() && this.externalFileReady && window.__simpleMindMapExternalAuthorizedPath === this.getExternalPath()) { this.mindMapData = { ...this.mindMapData, view: data }; this.saveExternalData(this.mindMapData).catch(error => this.$message.error(`源文件保存失败：${error.message}`)) }
+          if (this.$route.query.cloudPath) { this.mindMapData = { ...this.mindMapData, view: data }; this.saveCloudData(this.mindMapData).catch(() => this.$message.error('云端保存失败')) } else if (this.getExternalPath() && this.externalFileReady) { this.mindMapData = { ...this.mindMapData, view: data }; this.saveExternalData(this.mindMapData).catch(error => this.$message.error(`源文件保存失败：${error.message}`)) }
           else if (this.$route.query.localFile !== '1') storeData({ view: data })
         }, 300)
       })
@@ -433,11 +410,11 @@ export default {
         if (this.$route.query.cloudPath) {
           await this.saveCloudData(data)
           this.$message.success('已保存到云端')
-        } else if (this.getExternalPath() && this.externalFileReady && window.__simpleMindMapExternalAuthorizedPath === this.getExternalPath()) {
+        } else if (this.getExternalPath() && this.externalFileReady) {
           await this.saveExternalData(data)
           this.$message.success('已回写到源文件')
         } else if (this.getExternalPath()) {
-          this.$message.warning(window.__simpleMindMapExternalAuthorizedPath === this.getExternalPath() ? '源文件尚未导入完成' : '请先授权访问源文件夹')
+          this.$message.warning('源文件尚未导入完成')
         } else if (this.$route.query.localFile !== '1') storeData(data)
       } catch (error) {
         this.$message.error(`保存失败：${error.message}`)

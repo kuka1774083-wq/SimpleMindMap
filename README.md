@@ -1,5 +1,8 @@
 # SimpleMindMap for fnOS
 
+> **重要提示：安装或更新 FPK 后，请刷新飞牛网页后再使用。**
+> 这样才能加载最新前端资源并使应用权限配置生效。
+
 SimpleMindMap is a FlyOS (fnOS) web application that provides server-side, user-isolated storage for mind-map documents.
 
 ## Upstream source

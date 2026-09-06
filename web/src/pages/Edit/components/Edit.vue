@@ -627,7 +627,11 @@ export default {
         rootNodeData = data
       }
       this.mindMap.view.reset()
-      this.manualSave()
+      // External files are imported asynchronously (especially .xmind). Do not
+      // save the intermediate data before the source file has finished loading.
+      if (!window.__simpleMindMapExternalImporting) {
+        this.manualSave()
+      }
       // 如果导入的是富文本内容，那么自动开启富文本模式
       if (rootNodeData.data.richText && !this.openNodeRichText) {
         this.$bus.$emit('toggleOpenNodeRichText', true)
